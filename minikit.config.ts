@@ -3,9 +3,9 @@ const ROOT_URL = (process.env.NEXT_PUBLIC_ROOT_URL || "http://localhost:3000").r
 
 export const minikitConfig = {
   accountAssociation: {
-    header: "",
-    payload: "",
-    signature: "",
+    header: process.env.ACCOUNT_ASSOCIATION_HEADER || "",
+    payload: process.env.ACCOUNT_ASSOCIATION_PAYLOAD || "",
+    signature: process.env.ACCOUNT_ASSOCIATION_SIGNATURE || "",
   },
   baseBuilder: {
     ownerAddress: "0x92D88Fd2688A2732A97C0921d2aD5601Ab3d76E4",

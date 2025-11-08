@@ -102,10 +102,34 @@ After your app is deployed to Vercel:
 
 ### Environment Variables
 
-Create a `.env.local` file for local development:
+#### Local Development
+
+Create a `.env.local` file in the root directory:
 ```env
 NEXT_PUBLIC_ROOT_URL=http://localhost:3000
+
+# Account Association (sensitive - get these from Base Build Account Association Tool)
+# Replace with your actual values from https://build.base.org/account-association
+ACCOUNT_ASSOCIATION_HEADER=your_header_value_here
+ACCOUNT_ASSOCIATION_PAYLOAD=your_payload_value_here
+ACCOUNT_ASSOCIATION_SIGNATURE=your_signature_value_here
 ```
 
-**Note:** The production URL will be automatically set in Vercel's environment variables after deployment.
+**Important:** Never commit `.env.local` to git. It's already in `.gitignore`.
+
+#### Vercel Production
+
+Add these environment variables in Vercel Dashboard:
+
+1. Go to your project → **Settings** → **Environment Variables**
+2. Add each variable:
+   - `NEXT_PUBLIC_ROOT_URL` = `https://baseapp-virtuals.vercel.app` (your Vercel URL)
+   - `ACCOUNT_ASSOCIATION_HEADER` = (your header value)
+   - `ACCOUNT_ASSOCIATION_PAYLOAD` = (your payload value)
+   - `ACCOUNT_ASSOCIATION_SIGNATURE` = (your signature value)
+3. Select environments: **Production**, **Preview**, **Development**
+4. Click **Save**
+5. **Redeploy** your application for changes to take effect
+
+**Security Note:** These values are sensitive. Keep them secure and never expose them in client-side code or commit them to git.
 
