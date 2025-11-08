@@ -1,4 +1,5 @@
-const ROOT_URL = process.env.NEXT_PUBLIC_ROOT_URL || "http://localhost:3000";
+// Ensure ROOT_URL doesn't have trailing slash
+const ROOT_URL = (process.env.NEXT_PUBLIC_ROOT_URL || "http://localhost:3000").replace(/\/$/, "");
 
 export const minikitConfig = {
   accountAssociation: {
