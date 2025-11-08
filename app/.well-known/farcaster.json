@@ -1,0 +1,27 @@
+{
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Virtuals",
+    "subtitle": "Discover Virtual Tokens on Base",
+    "description": "Browse and explore virtual tokens with real-time data, sorting by volume, price change, or age.",
+    "screenshotUrls": [],
+    "iconUrl": "",
+    "splashImageUrl": "",
+    "splashBackgroundColor": "#f0fdf4",
+    "homeUrl": "",
+    "webhookUrl": "",
+    "primaryCategory": "social",
+    "tags": ["virtuals", "tokens", "base", "crypto"],
+    "heroImageUrl": "",
+    "tagline": "Discover Virtual Tokens",
+    "ogTitle": "Virtuals - Base Mini App",
+    "ogDescription": "Browse and explore virtual tokens on Base",
+    "ogImageUrl": ""
+  }
+}
+

@@ -1,0 +1,115 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { VirtualToken, SortOption, CoinGeckoPriceResponse } from "@/lib/types";
+import { fetchVirtuals } from "@/lib/api/virtuals";
+import { fetchCoinGeckoPrices } from "@/lib/api/coingecko";
+import SortTabs from "@/components/SortTabs";
+import TokenCard from "@/components/TokenCard";
+
+export default function Home() {
+  const [sortBy, setSortBy] = useState<SortOption>("volume24h");
+  const [tokens, setTokens] = useState<VirtualToken[]>([]);
+  const [coingeckoPrice, setCoingeckoPrice] = useState<number>(1.37); // Default fallback
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch CoinGecko price on mount
+  useEffect(() => {
+    async function loadPrice() {
+      try {
+        const prices: CoinGeckoPriceResponse = await fetchCoinGeckoPrices();
+        setCoingeckoPrice(prices["virtual-protocol"].usd);
+      } catch (err) {
+        console.error("Failed to fetch CoinGecko price:", err);
+        // Keep default fallback value
+      }
+    }
+    loadPrice();
+  }, []);
+
+  // Fetch virtuals data when sort option changes
+  useEffect(() => {
+    async function loadTokens() {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetchVirtuals(sortBy);
+        setTokens(response.data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load tokens");
+        console.error("Failed to fetch virtuals:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadTokens();
+  }, [sortBy]);
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-green-50/50 to-white">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 max-w-6xl">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-2">
+            Virtuals
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600">
+            Discover virtual tokens on Base. Sort by volume, price change, or age.
+          </p>
+        </div>
+
+        {/* Sort Tabs */}
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <SortTabs activeSort={sortBy} onSortChange={setSortBy} />
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+              <p className="text-gray-600">Loading tokens...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-800">{error}</p>
+            <button
+              onClick={() => {
+                setSortBy("volume24h");
+                setError(null);
+              }}
+              className="mt-2 text-sm text-red-600 hover:text-red-700 font-medium"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {/* Token List */}
+        {!loading && !error && (
+          <div className="grid gap-3 sm:gap-4">
+            {tokens.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                No tokens found.
+              </div>
+            ) : (
+              tokens.map((token) => (
+                <TokenCard
+                  key={token.id}
+                  token={token}
+                  coingeckoPrice={coingeckoPrice}
+                />
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
