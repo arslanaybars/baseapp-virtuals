@@ -7,6 +7,9 @@ export const minikitConfig = {
     payload: "",
     signature: "",
   },
+  baseBuilder: {
+    ownerAddress: "0x92D88Fd2688A2732A97C0921d2aD5601Ab3d76E4",
+  },
   miniapp: {
     version: "1",
     name: "Virtuals",

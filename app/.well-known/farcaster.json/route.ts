@@ -46,6 +46,16 @@ export async function GET() {
     manifest.accountAssociation = minikitConfig.accountAssociation;
   }
 
+  // Add baseBuilder if ownerAddress is provided
+  if (
+    minikitConfig.baseBuilder?.ownerAddress &&
+    minikitConfig.baseBuilder.ownerAddress.trim() !== ""
+  ) {
+    manifest.baseBuilder = {
+      ownerAddress: minikitConfig.baseBuilder.ownerAddress,
+    };
+  }
+
   return NextResponse.json(manifest, {
     headers: {
       "Content-Type": "application/json",
