@@ -13,7 +13,7 @@ export const minikitConfig = {
   miniapp: {
     version: "1",
     name: "Virtuals",
-    subtitle: "Discover Virtual Tokens on Base",
+    subtitle: "Discover Virtual Tokens",
     description: "Browse and explore virtual tokens with real-time data, sorting by volume, price change, or age.",
     screenshotUrls: [`${ROOT_URL}/screenshot-portrait.png`],
     iconUrl: `${ROOT_URL}/icon.png`,
