@@ -18,73 +18,84 @@ export default function RootLayout({
         {/* Base App SDK ready() caller - runs as early as possible */}
         <Script
           id="base-sdk-ready"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
+                console.log('[Base SDK] Initializing ready() caller...');
                 var readyCalled = false;
                 
                 // Function to call ready() when SDK is available
                 function callReady() {
-                  if (readyCalled) return true;
+                  if (readyCalled) {
+                    console.log('[Base SDK] ready() already called, skipping');
+                    return true;
+                  }
+                  
+                  // Debug: Log all possible SDK locations
+                  console.log('[Base SDK] Checking for SDK...');
+                  console.log('[Base SDK] window.sdk:', window.sdk);
+                  console.log('[Base SDK] window.parent.sdk:', window.parent && window.parent.sdk);
+                  console.log('[Base SDK] window.top.sdk:', window.top && window.top.sdk);
+                  console.log('[Base SDK] window.farcaster:', window.farcaster);
+                  console.log('[Base SDK] window.base:', window.base);
                   
                   var sdk = null;
                   
-                  // Check various possible SDK locations
+                  // Check window.sdk first (most common)
                   if (window.sdk && window.sdk.actions && typeof window.sdk.actions.ready === 'function') {
                     sdk = window.sdk;
-                  } else if (window.farcaster && window.farcaster.sdk && window.farcaster.sdk.actions && typeof window.farcaster.sdk.actions.ready === 'function') {
+                    console.log('[Base SDK] Found SDK at window.sdk');
+                  }
+                  // Check parent window (iframe context)
+                  else if (window.parent && window.parent.sdk && window.parent.sdk.actions && typeof window.parent.sdk.actions.ready === 'function') {
+                    sdk = window.parent.sdk;
+                    console.log('[Base SDK] Found SDK at window.parent.sdk');
+                  }
+                  // Check top window
+                  else if (window.top && window.top.sdk && window.top.sdk.actions && typeof window.top.sdk.actions.ready === 'function') {
+                    sdk = window.top.sdk;
+                    console.log('[Base SDK] Found SDK at window.top.sdk');
+                  }
+                  // Check other possible locations
+                  else if (window.farcaster && window.farcaster.sdk && window.farcaster.sdk.actions && typeof window.farcaster.sdk.actions.ready === 'function') {
                     sdk = window.farcaster.sdk;
-                  } else if (window.base && window.base.sdk && window.base.sdk.actions && typeof window.base.sdk.actions.ready === 'function') {
+                    console.log('[Base SDK] Found SDK at window.farcaster.sdk');
+                  }
+                  else if (window.base && window.base.sdk && window.base.sdk.actions && typeof window.base.sdk.actions.ready === 'function') {
                     sdk = window.base.sdk;
+                    console.log('[Base SDK] Found SDK at window.base.sdk');
                   }
                   
                   if (sdk && sdk.actions && sdk.actions.ready) {
                     try {
+                      console.log('[Base SDK] Calling ready()...');
                       sdk.actions.ready();
                       readyCalled = true;
-                      console.log('[Base SDK] ready() called successfully');
+                      console.log('[Base SDK] ✓ ready() called successfully!');
                       return true;
                     } catch (e) {
-                      console.error('[Base SDK] Error calling ready():', e);
+                      console.error('[Base SDK] ✗ Error calling ready():', e);
                     }
+                  } else {
+                    console.log('[Base SDK] SDK not found yet');
                   }
                   return false;
                 }
                 
                 // Try immediately
-                if (callReady()) return;
+                callReady();
                 
-                // Use MutationObserver to watch for SDK injection
-                if (window.MutationObserver) {
-                  var observer = new MutationObserver(function(mutations) {
-                    if (callReady()) {
-                      observer.disconnect();
-                    }
-                  });
-                  
-                  observer.observe(document.documentElement, {
-                    childList: true,
-                    subtree: true,
-                    attributes: true,
-                    attributeFilter: ['data-sdk', 'data-base-sdk']
-                  });
-                  
-                  // Disconnect after 10 seconds
-                  setTimeout(function() {
-                    observer.disconnect();
-                  }, 10000);
-                }
-                
-                // Retry with intervals
+                // Retry with very frequent intervals
                 var attempts = 0;
-                var maxAttempts = 200; // 20 seconds
+                var maxAttempts = 300; // 30 seconds
                 var interval = setInterval(function() {
                   attempts++;
                   if (callReady() || attempts >= maxAttempts) {
                     clearInterval(interval);
                     if (attempts >= maxAttempts && !readyCalled) {
-                      console.warn('[Base SDK] ready() not called after maximum attempts. SDK may not be available.');
+                      console.error('[Base SDK] ✗ ready() not called after maximum attempts. SDK may not be available.');
+                      console.log('[Base SDK] Debug info - window keys:', Object.keys(window).filter(function(k) { return k.toLowerCase().includes('sdk') || k.toLowerCase().includes('base') || k.toLowerCase().includes('farcaster'); }));
                     }
                   }
                 }, 100);
@@ -93,21 +104,15 @@ export default function RootLayout({
                 if (document.readyState === 'complete' || document.readyState === 'interactive') {
                   callReady();
                 } else {
-                  window.addEventListener('load', callReady, { once: true });
-                  document.addEventListener('DOMContentLoaded', callReady, { once: true });
+                  window.addEventListener('load', function() {
+                    console.log('[Base SDK] Window load event fired');
+                    callReady();
+                  }, { once: true });
+                  document.addEventListener('DOMContentLoaded', function() {
+                    console.log('[Base SDK] DOMContentLoaded event fired');
+                    callReady();
+                  }, { once: true });
                 }
-                
-                // Watch for window.sdk property changes
-                var sdkCheckInterval = setInterval(function() {
-                  if (callReady()) {
-                    clearInterval(sdkCheckInterval);
-                  }
-                }, 50);
-                
-                // Clear interval after 20 seconds
-                setTimeout(function() {
-                  clearInterval(sdkCheckInterval);
-                }, 20000);
               })();
             `,
           }}
