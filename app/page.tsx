@@ -6,17 +6,7 @@ import { fetchVirtuals } from "@/lib/api/virtuals";
 import { fetchCoinGeckoPrices } from "@/lib/api/coingecko";
 import SortTabs from "@/components/SortTabs";
 import TokenCard from "@/components/TokenCard";
-
-// Declare Base SDK types
-declare global {
-  interface Window {
-    sdk?: {
-      actions: {
-        ready: () => void;
-      };
-    };
-  }
-}
+import { sdk } from "@farcaster/miniapp-sdk";
 
 export default function Home() {
   const [sortBy, setSortBy] = useState<SortOption>("volume24h");
@@ -25,58 +15,48 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Call Base SDK ready() when component mounts and SDK is available
-  // This is a backup in case the layout script didn't catch it
+  // Call Base SDK ready() when component mounts
   useEffect(() => {
-    // Base App SDK is automatically injected by Base App
-    // We need to wait for it and call ready() to dismiss splash screen
-    let retryCount = 0;
-    const maxRetries = 50; // 5 seconds max wait time
-    let timeoutId: NodeJS.Timeout | null = null;
-    let called = false;
+    let interval: NodeJS.Timeout | null = null;
     
-    const callReady = () => {
-      if (called) return; // Prevent multiple calls
-      if (typeof window === "undefined") return;
-      
-      const win = window as any;
-      
-      // Check multiple possible SDK locations
-      let sdkReady = null;
-      
-      if (win.sdk?.actions?.ready) {
-        sdkReady = win.sdk.actions.ready;
-      } else if (win.farcaster?.sdk?.actions?.ready) {
-        sdkReady = win.farcaster.sdk.actions.ready;
-      } else if (win.base?.sdk?.actions?.ready) {
-        sdkReady = win.base.sdk.actions.ready;
-      }
-      
-      if (sdkReady) {
-        try {
-          sdkReady();
-          called = true;
-          console.log("[Base SDK] ready() called successfully from page component");
-          if (timeoutId) clearTimeout(timeoutId);
+    const callReady = async () => {
+      try {
+        // Wait up to 5 seconds for SDK to be available
+        const maxWaitTime = 10000;
+        const startTime = Date.now();
+        
+        const checkAndCall = async () => {
+          if (sdk?.actions?.ready) {
+            await sdk.actions.ready();
+            return true;
+          }
+          return false;
+        };
+        
+        // Try immediately
+        if (await checkAndCall()) {
           return;
-        } catch (error) {
-          console.error("[Base SDK] Error calling ready():", error);
         }
-      }
-      
-      // Retry if SDK is not yet available
-      retryCount++;
-      if (retryCount < maxRetries) {
-        timeoutId = setTimeout(callReady, 100);
+        
+        // Retry with intervals until SDK is available or timeout
+        interval = setInterval(async () => {
+          if (await checkAndCall()) {
+            if (interval) clearInterval(interval);
+          } else if (Date.now() - startTime >= maxWaitTime) {
+            if (interval) clearInterval(interval);
+            console.warn("Base SDK ready() not called - SDK may not be available");
+          }
+        }, 100);
+      } catch (error) {
+        console.error("Error calling Base SDK ready():", error);
       }
     };
     
-    // Start checking after a small delay to let layout script try first
-    timeoutId = setTimeout(callReady, 200);
+    callReady();
     
-    // Cleanup
+    // Cleanup on unmount
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      if (interval) clearInterval(interval);
     };
   }, []);
 
