@@ -26,20 +26,22 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   // Call Base SDK ready() when component mounts and SDK is available
+  // This is a backup in case the layout script didn't catch it
   useEffect(() => {
     // Base App SDK is automatically injected by Base App
     // We need to wait for it and call ready() to dismiss splash screen
     let retryCount = 0;
-    const maxRetries = 100; // 10 seconds max wait time (100 * 100ms)
+    const maxRetries = 50; // 5 seconds max wait time
     let timeoutId: NodeJS.Timeout | null = null;
+    let called = false;
     
     const callReady = () => {
+      if (called) return; // Prevent multiple calls
       if (typeof window === "undefined") return;
       
       const win = window as any;
       
       // Check multiple possible SDK locations
-      // Base App may inject SDK as window.sdk, window.farcaster, or window.base
       let sdkReady = null;
       
       if (win.sdk?.actions?.ready) {
@@ -53,53 +55,28 @@ export default function Home() {
       if (sdkReady) {
         try {
           sdkReady();
-          console.log("Base SDK ready() called successfully");
+          called = true;
+          console.log("[Base SDK] ready() called successfully from page component");
           if (timeoutId) clearTimeout(timeoutId);
           return;
         } catch (error) {
-          console.error("Error calling SDK ready():", error);
+          console.error("[Base SDK] Error calling ready():", error);
         }
       }
       
-      // Retry if SDK is not yet available (Base App injects it)
+      // Retry if SDK is not yet available
       retryCount++;
       if (retryCount < maxRetries) {
         timeoutId = setTimeout(callReady, 100);
-      } else {
-        console.warn("Base SDK not found after maximum retries. App may not be running in Base App context.");
-        // Try one more time after a longer delay in case SDK loads very late
-        setTimeout(() => {
-          const win = window as any;
-          if (win.sdk?.actions?.ready) {
-            try {
-              win.sdk.actions.ready();
-              console.log("Base SDK ready() called on final retry");
-            } catch (error) {
-              console.error("Error calling SDK ready() on final retry:", error);
-            }
-          }
-        }, 2000);
       }
     };
     
-    // Start checking immediately
-    callReady();
-    
-    // Also check when DOM is ready
-    if (typeof document !== "undefined") {
-      if (document.readyState === "complete") {
-        callReady();
-      } else {
-        window.addEventListener("load", callReady);
-      }
-    }
+    // Start checking after a small delay to let layout script try first
+    timeoutId = setTimeout(callReady, 200);
     
     // Cleanup
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
-      if (typeof window !== "undefined") {
-        window.removeEventListener("load", callReady);
-      }
     };
   }, []);
 
