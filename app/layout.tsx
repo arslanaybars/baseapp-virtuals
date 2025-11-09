@@ -14,30 +14,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased bg-white text-gray-900">
-        {/* Base Mini App SDK - loaded automatically by Base App, but we ensure it's available */}
+      <head>
+        {/* Base App SDK - ensure SDK is available globally */}
         <Script
-          id="base-sdk"
-          strategy="afterInteractive"
+          id="base-sdk-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              // Wait for Base SDK to be available
-              (function() {
-                function checkSDK() {
-                  if (window.sdk && window.sdk.actions && window.sdk.actions.ready) {
-                    // SDK is available, ready() will be called from page component
-                    return;
-                  }
-                  // Retry after a short delay
-                  setTimeout(checkSDK, 100);
-                }
-                checkSDK();
-              })();
+              // Create global SDK object if Base App hasn't injected it yet
+              if (typeof window !== 'undefined' && !window.sdk) {
+                window.sdk = window.sdk || {};
+                window.sdk.actions = window.sdk.actions || {};
+              }
             `,
           }}
         />
-        {children}
-      </body>
+      </head>
+      <body className="antialiased bg-white text-gray-900">{children}</body>
     </html>
   );
 }

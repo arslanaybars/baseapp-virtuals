@@ -29,17 +29,78 @@ export default function Home() {
   useEffect(() => {
     // Base App SDK is automatically injected by Base App
     // We need to wait for it and call ready() to dismiss splash screen
+    let retryCount = 0;
+    const maxRetries = 100; // 10 seconds max wait time (100 * 100ms)
+    let timeoutId: NodeJS.Timeout | null = null;
+    
     const callReady = () => {
-      if (typeof window !== "undefined" && (window as any).sdk?.actions?.ready) {
-        (window as any).sdk.actions.ready();
+      if (typeof window === "undefined") return;
+      
+      const win = window as any;
+      
+      // Check multiple possible SDK locations
+      // Base App may inject SDK as window.sdk, window.farcaster, or window.base
+      let sdkReady = null;
+      
+      if (win.sdk?.actions?.ready) {
+        sdkReady = win.sdk.actions.ready;
+      } else if (win.farcaster?.sdk?.actions?.ready) {
+        sdkReady = win.farcaster.sdk.actions.ready;
+      } else if (win.base?.sdk?.actions?.ready) {
+        sdkReady = win.base.sdk.actions.ready;
+      }
+      
+      if (sdkReady) {
+        try {
+          sdkReady();
+          console.log("Base SDK ready() called successfully");
+          if (timeoutId) clearTimeout(timeoutId);
+          return;
+        } catch (error) {
+          console.error("Error calling SDK ready():", error);
+        }
+      }
+      
+      // Retry if SDK is not yet available (Base App injects it)
+      retryCount++;
+      if (retryCount < maxRetries) {
+        timeoutId = setTimeout(callReady, 100);
       } else {
-        // Retry if SDK is not yet available (Base App injects it)
-        setTimeout(callReady, 100);
+        console.warn("Base SDK not found after maximum retries. App may not be running in Base App context.");
+        // Try one more time after a longer delay in case SDK loads very late
+        setTimeout(() => {
+          const win = window as any;
+          if (win.sdk?.actions?.ready) {
+            try {
+              win.sdk.actions.ready();
+              console.log("Base SDK ready() called on final retry");
+            } catch (error) {
+              console.error("Error calling SDK ready() on final retry:", error);
+            }
+          }
+        }, 2000);
       }
     };
     
-    // Start checking for SDK availability
+    // Start checking immediately
     callReady();
+    
+    // Also check when DOM is ready
+    if (typeof document !== "undefined") {
+      if (document.readyState === "complete") {
+        callReady();
+      } else {
+        window.addEventListener("load", callReady);
+      }
+    }
+    
+    // Cleanup
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("load", callReady);
+      }
+    };
   }, []);
 
   // Fetch CoinGecko price on mount
