@@ -7,12 +7,40 @@ import { fetchCoinGeckoPrices } from "@/lib/api/coingecko";
 import SortTabs from "@/components/SortTabs";
 import TokenCard from "@/components/TokenCard";
 
+// Declare Base SDK types
+declare global {
+  interface Window {
+    sdk?: {
+      actions: {
+        ready: () => void;
+      };
+    };
+  }
+}
+
 export default function Home() {
   const [sortBy, setSortBy] = useState<SortOption>("volume24h");
   const [tokens, setTokens] = useState<VirtualToken[]>([]);
   const [coingeckoPrice, setCoingeckoPrice] = useState<number>(1.37); // Default fallback
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Call Base SDK ready() when component mounts and SDK is available
+  useEffect(() => {
+    // Base App SDK is automatically injected by Base App
+    // We need to wait for it and call ready() to dismiss splash screen
+    const callReady = () => {
+      if (typeof window !== "undefined" && (window as any).sdk?.actions?.ready) {
+        (window as any).sdk.actions.ready();
+      } else {
+        // Retry if SDK is not yet available (Base App injects it)
+        setTimeout(callReady, 100);
+      }
+    };
+    
+    // Start checking for SDK availability
+    callReady();
+  }, []);
 
   // Fetch CoinGecko price on mount
   useEffect(() => {
